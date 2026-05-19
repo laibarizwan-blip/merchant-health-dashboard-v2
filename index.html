@@ -105,7 +105,56 @@ function issueStats(name){const rows=merchantIssues(name), open=rows.filter(r=>!
 function relScore(name){const row=rels.find(r=>key(r,['1. Merchant Name','Merchant Name','Merchant','Company']).toLowerCase().includes(String(name).toLowerCase())); if(!row)return{score:3.5,pricing:'Unknown',switching:'Unknown'}; const pricing=Object.values(row).join(' ').match(/shift|switch|pricing|MDR/i)?Object.values(row).join(' ').slice(0,120):'Survey response found'; let score=/shift|switch/i.test(pricing)?2.8:3.8; return{score,pricing,switching:'See survey response'}}
 function statusClass(s){if(/critical/i.test(s))return'bg-red-100 text-red-700'; if(/watch/i.test(s))return'bg-amber-100 text-amber-700'; return'bg-blue-100 text-blue-700'}
 
-function build(){
+function build(){txns.forEach(r => {
+  const merchant = r["Merchant Name"];
+  if (!merchant) return;
+
+  const operator = r["Operator"] || "Unknown";
+  const month = r["Date"] || "Unknown";
+
+  const total = Number(String(r["Total Trx"] || 0).replace(/,/g, ""));
+  const success = Number(String(r["Successful Trx"] || 0).replace(/,/g, ""));
+  const volume = Number(String(r["Vol Success"] || 0).replace(/,/g, ""));
+
+  const keyName = merchant.toLowerCase();
+
+  if (!mm[keyName]) {
+    mm[keyName] = {
+      name: merchant,
+      total: 0,
+      succ: 0,
+      vol: 0,
+      ops: {},
+      months: {}
+    };
+  }
+
+  mm[keyName].total += total;
+  mm[keyName].succ += success;
+  mm[keyName].vol += volume;
+
+  mm[keyName].ops[operator] =
+    (mm[keyName].ops[operator] || 0) + volume;
+
+  mm[keyName].months[month] =
+    (mm[keyName].months[month] || 0) + volume;
+
+  if (!om[operator]) {
+    om[operator] = {
+      name: operator,
+      total: 0,
+      succ: 0,
+      vol: 0
+    };
+  }
+
+  om[operator].total += total;
+  om[operator].succ += success;
+  om[operator].vol += volume;
+
+  monthTotals[month] =
+    (monthTotals[month] || 0) + volume;
+});
  const mm={}, om={}, month={};
  txns.forEach(r=>{
   const m=key(r,['Merchant Name','Merchant','Partner Name','merchant','Company']); if(!m)return;
